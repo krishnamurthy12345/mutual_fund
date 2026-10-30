@@ -1,0 +1,278 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   GLOBAL THEME CONTROL PALETTE
+   Modify the variables in this section to change the entire application's
+   color scheme, surfaces, and dark/light modes in one central place!
+   ========================================================================= */
+
+:root {
+  /* =======================================================================
+     1. PRIMARY BRAND ACCENT: Institutional Financial Blue
+     All components, buttons, badges, highlights, and borders dynamically
+     inherit this palette across the entire site!
+     ======================================================================= */
+  --brand-50:  #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-300: #93c5fd;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e40af;
+  --brand-900: #1e3a8a;
+  --brand-950: #172554;
+
+  /* =======================================================================
+     2. LIGHT MODE INTERFACE SURFACES
+     ======================================================================= */
+  --background:       #f8fafc;
+  --foreground:       #0f172a;
+  --card-bg:          #ffffff;
+  --card-border:      #e2e8f0;
+  --card-muted:       #f1f5f9;
+  --muted:            #64748b;
+  --muted-light:      #94a3b8;
+  --navbar-bg:        rgba(255, 255, 255, 0.94);
+  --navbar-border:    rgba(226, 232, 240, 0.85);
+
+  /* Shadows */
+  --shadow-brand: rgba(37, 99, 235, 0.08);
+  --shadow-brand-strong: rgba(37, 99, 235, 0.16);
+
+  /* Supporting Accent */
+  --accent:           var(--brand-600);
+  --accent-light:     var(--brand-500);
+  --accent-dark:      var(--brand-700);
+}
+
+/* =========================================================================
+   DARK MODE PALETTE
+   Active when <html class="dark"> or data-theme="dark" is set
+   ========================================================================= */
+.dark,
+[data-theme="dark"] {
+  /* Dark Mode Interface Surfaces */
+  --background:       #080c14;
+  --foreground:       #f1f5f9;
+  --card-bg:          #0f172a;
+  --card-border:      #1e293b;
+  --card-muted:       #172033;
+  --muted:            #94a3b8;
+  --muted-light:      #64748b;
+  --navbar-bg:        rgba(15, 23, 42, 0.94);
+  --navbar-border:    rgba(30, 41, 59, 0.85);
+
+  /* Contrast-optimized brand values for dark backgrounds */
+  --brand-50:  #0a192f;
+  --brand-100: #172554;
+  --brand-200: #1e3a8a;
+  --brand-300: #1e40af;
+  --brand-400: #2563eb;
+  --brand-500: #3b82f6;
+  --brand-600: #3b82f6;
+  --brand-700: #60a5fa;
+  --brand-800: #93c5fd;
+  --brand-900: #bfdbfe;
+  --brand-950: #eff6ff;
+
+  /* Shadows in Dark Mode */
+  --shadow-brand: rgba(59, 130, 246, 0.12);
+  --shadow-brand-strong: rgba(59, 130, 246, 0.25);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+/* =========================================================================
+   TAILWIND THEME TOKENS
+   Mapped to the CSS variables so Tailwind utilities dynamically follow
+   the central theme in globals.css!
+   ========================================================================= */
+
+@theme inline {
+  /* Surfaces */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-navbar-bg: var(--navbar-bg);
+  --color-navbar-border: var(--navbar-border);
+
+  /* Primary Brand Palette (Blue) */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+
+  /* Emerald Aliases:
+     Directly tied to the brand variables so all existing components across
+     the entire site update simultaneously whenever globals.css changes! */
+  --color-emerald-50: var(--brand-50);
+  --color-emerald-100: var(--brand-100);
+  --color-emerald-200: var(--brand-200);
+  --color-emerald-300: var(--brand-300);
+  --color-emerald-400: var(--brand-400);
+  --color-emerald-500: var(--brand-500);
+  --color-emerald-600: var(--brand-600);
+  --color-emerald-700: var(--brand-700);
+  --color-emerald-800: var(--brand-800);
+  --color-emerald-900: var(--brand-900);
+  --color-emerald-950: var(--brand-950);
+
+  /* Blue Aliases:
+     Tied directly to brand variables for standard blue utility classes */
+  --color-blue-50: var(--brand-50);
+  --color-blue-100: var(--brand-100);
+  --color-blue-200: var(--brand-200);
+  --color-blue-300: var(--brand-300);
+  --color-blue-400: var(--brand-400);
+  --color-blue-500: var(--brand-500);
+  --color-blue-600: var(--brand-600);
+  --color-blue-700: var(--brand-700);
+  --color-blue-800: var(--brand-800);
+  --color-blue-900: var(--brand-900);
+  --color-blue-950: var(--brand-950);
+
+  /* Accent & Muted */
+  --color-accent: var(--brand-600);
+  --color-accent-light: var(--brand-500);
+  --color-accent-dark: var(--brand-700);
+  --color-muted: var(--muted);
+  --color-muted-light: var(--muted-light);
+}
+
+/* =========================================================================
+   BASE BODY STYLES
+   ========================================================================= */
+
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Selection */
+::selection {
+  background: var(--brand-200);
+  color: var(--brand-950);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--brand-300);
+  border-radius: 999px;
+  border: 2px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-500);
+}
+
+/* =========================================================================
+   DARK MODE AUTOMATIC SURFACE OVERRIDES
+   Ensures that existing pages, cards, inputs, and borders immediately adapt
+   to Dark Mode with seamless contrast!
+   ========================================================================= */
+
+.dark body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.dark main {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: var(--background) !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: var(--card-muted) !important;
+}
+
+.dark .bg-white {
+  background-color: var(--card-bg) !important;
+  color: var(--foreground);
+}
+
+.dark .bg-white\/90,
+.dark .bg-white\/95,
+.dark .bg-white\/98 {
+  background-color: var(--navbar-bg) !important;
+}
+
+.dark .text-slate-900 {
+  color: var(--foreground) !important;
+}
+
+.dark .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-600 {
+  color: var(--muted) !important;
+}
+
+.dark .border-slate-200,
+.dark .border-slate-200\/80,
+.dark .border-slate-200\/60,
+.dark .border-slate-100 {
+  border-color: var(--card-border) !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--card-muted) !important;
+  color: var(--foreground) !important;
+  border-color: var(--card-border) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--muted) !important;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 3px;
+}
