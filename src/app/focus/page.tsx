@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getAssetPath } from '@/lib/utils';
 import {
   TrendingUp,
   ShieldCheck,
@@ -172,7 +173,7 @@ export default function FocusPage() {
             {/* Arch-topped media frame */}
             <div className="relative w-full max-w-[480px] h-[400px] sm:h-[460px] md:h-[490px] rounded-t-[220px] rounded-b-2xl overflow-hidden shadow-2xl border-2 border-white dark:border-slate-800 bg-slate-900 group">
               <Image
-                src="/images/discussion.webp"
+                src={getAssetPath("/images/discussion.webp")}
                 alt="Strategic financial advisory meeting and portfolio discussion"
                 fill
                 priority

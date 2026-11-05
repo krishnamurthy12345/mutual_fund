@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import { getAssetPath } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
   Phone,
@@ -100,7 +101,7 @@ export default function ContactPage() {
 
             <div className="relative h-[380px] sm:h-[440px] md:h-[480px] w-full max-w-[460px] rounded-t-[220px] rounded-b-2xl overflow-hidden bg-slate-900 border-2 border-white dark:border-slate-800 shadow-2xl group">
               <Image
-                src="/images/consultation.webp"
+                src={getAssetPath("/images/consultation.webp")}
                 alt="Advisory consultation meeting with Indian clients"
                 fill
                 priority

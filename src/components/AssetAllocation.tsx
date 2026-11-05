@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { getAssetPath } from '@/lib/utils';
 
 export default function AssetAllocation() {
   return (
@@ -116,7 +117,7 @@ export default function AssetAllocation() {
             "
           >
             <source
-              src="/videos/animation.mp4"
+              src={getAssetPath("/videos/animation.mp4")}
               type="video/mp4"
             />
           </video>

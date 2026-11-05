@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
+import { getAssetPath } from '@/lib/utils';
 
 export default function WhoWeAreSection() {
   return (
@@ -27,7 +28,7 @@ export default function WhoWeAreSection() {
               {/* TOP CIRCLE PHOTO (crop-a): Strategy / advisory meeting */}
               <div className="relative rounded-full overflow-hidden shadow-xl border-2 border-white dark:border-slate-800 bg-slate-900 group">
                 <Image
-                  src="/images/family-advisory.webp"
+                  src={getAssetPath("/images/family-advisory.webp")}
                   alt="Business strategy and mutual fund advisory discussion"
                   fill
                   sizes="(max-width: 768px) 50vw, 250px"
@@ -59,7 +60,7 @@ export default function WhoWeAreSection() {
               {/* BOTTOM CIRCLE PHOTO (crop-c): Client Consultation */}
               <div className="relative rounded-full overflow-hidden shadow-xl border-2 border-white dark:border-slate-800 bg-slate-900 group">
                 <Image
-                  src="/images/consultation.webp"
+                  src={getAssetPath("/images/consultation.webp")}
                   alt="Private financial consultation session with Indian clients"
                   fill
                   sizes="(max-width: 768px) 50vw, 250px"

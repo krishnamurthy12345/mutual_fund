@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, X, Video } from 'lucide-react';
+import { getAssetPath } from '@/lib/utils';
 
 const vlogs = [
   {
@@ -64,7 +65,7 @@ export default function VlogHub() {
       {/* Background Video Layer for Vlog Hub Section */}
       <div className="absolute inset-0 z-0 opacity-15 overflow-hidden pointer-events-none">
         <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-          <source src="/videos/vlog-bg.mp4" type="video/mp4" />
+          <source src={getAssetPath("/videos/vlog-bg.mp4")} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950/80 to-slate-950" />
       </div>

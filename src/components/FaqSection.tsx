@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Plus, Minus, ShieldCheck } from 'lucide-react';
+import { getAssetPath } from '@/lib/utils';
 
 export default function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -51,7 +52,7 @@ export default function FaqSection() {
             {/* Arch-topped media frame */}
             <div className="relative w-full h-[420px] sm:h-[480px] rounded-t-[190px] rounded-b-2xl overflow-hidden shadow-2xl border-2 border-white dark:border-slate-800 bg-slate-900 group">
               <Image
-                src="/images/family-advisory.webp"
+                src={getAssetPath("/images/family-advisory.webp")}
                 alt="Indian family and adviser discussing long-term financial goals"
                 fill
                 sizes="(max-width: 768px) 100vw, 450px"

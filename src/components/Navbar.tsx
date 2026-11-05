@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
+import { getAssetPath } from '@/lib/utils';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -44,7 +45,7 @@ export default function Navbar() {
 
             <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-xl bg-white border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center overflow-hidden group-hover/logo:border-emerald-300 group-hover/logo:shadow-lg group-hover/logo:shadow-emerald-500/15 transition-all duration-300">
               <Image
-                src="/images/abc-logo.svg"
+                src={getAssetPath("/images/abc-logo.svg")}
                 alt="ABC Mutual Fund Logo"
                 fill
                 priority

@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowUpRight, ShieldCheck, ArrowDownRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { getAssetPath } from '@/lib/utils';
 
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,7 +36,7 @@ export default function Hero() {
           preload="auto"
           className="absolute inset-0 w-full h-full object-cover opacity-80"
         >
-          <source src="/videos/overlay.mp4" type="video/mp4" />
+          <source src={getAssetPath("/videos/overlay.mp4")} type="video/mp4" />
         </video>
       </motion.div>
 

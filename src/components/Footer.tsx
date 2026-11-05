@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { getAssetPath } from '@/lib/utils';
 
 export default function Footer() {
   return (
@@ -25,7 +26,7 @@ export default function Footer() {
 
                 <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-white border border-emerald-400/40 shadow-lg flex items-center justify-center group-hover/logo:border-emerald-300 transition-all duration-300">
                   <Image
-                    src="/images/abc-logo.svg"
+                    src={getAssetPath("/images/abc-logo.svg")}
                     alt="ABC Mutual Fund Logo"
                     fill
                     priority
