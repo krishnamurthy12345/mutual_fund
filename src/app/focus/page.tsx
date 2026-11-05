@@ -110,7 +110,7 @@ export default function FocusPage() {
             </div>
 
             {/* Display Heading matching Image 2 */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.02]">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.02]">
               Where We
               <br />
               <span className="font-serif italic font-normal text-emerald-600 dark:text-emerald-400">
@@ -119,21 +119,21 @@ export default function FocusPage() {
             </h1>
 
             {/* Narrative description matching Image 2 */}
-            <p className="text-slate-600 dark:text-slate-300 text-base md:text-lg leading-relaxed font-normal max-w-xl">
+            <p className="text-slate-900 dark:text-slate-300 text-base md:text-lg leading-relaxed font-normal max-w-xl">
               Four areas where capital, judgment and execution matter most — and where an independent, disciplined view earns its keep.
             </p>
 
             {/* Checkmark List */}
             <div className="pt-2 space-y-3 max-w-xl">
-              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Core Equity SIPs for multi-year compounding growth</span>
               </div>
-              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Non-correlated Multi-Asset hedging (Gold/Silver ETFs + Fixed Income)</span>
               </div>
-              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Corporate treasury surplus deployment in liquid and arbitrage funds</span>
               </div>
@@ -262,10 +262,10 @@ export default function FocusPage() {
             <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 block mb-2">
               Advisory Architecture
             </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
               Perspective for capital at consequential moments.
             </h2>
-            <p className="text-slate-600 dark:text-slate-300 text-base mt-4 leading-relaxed">
+            <p className="text-slate-900 dark:text-slate-300 text-base mt-4 leading-relaxed">
               Selective, senior-level counsel shaped around your financial context, tax alignment, and durable compounding.
             </p>
           </div>
@@ -347,7 +347,7 @@ export default function FocusPage() {
         {/* ASK FIRST: WHAT DOES THIS MONEY NEED TO DO? */}
         {/* ========================================================= */}
         <section className="mb-24 p-8 md:p-16 rounded-3xl bg-emerald-950 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/40 rounded-full blur-3xl pointer-events-none" />
 
           <div className="max-w-3xl relative z-10">
             <span className="text-xs font-bold uppercase tracking-widest text-emerald-400 block mb-3">

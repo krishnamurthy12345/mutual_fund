@@ -182,7 +182,7 @@ export default function InsightsPage() {
             </div>
 
             {/* Display Heading matching Image 2 */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.02]">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.02]">
               No Noise.
               <br />
               <span className="font-serif italic font-normal text-emerald-600 dark:text-emerald-400">
@@ -198,15 +198,15 @@ export default function InsightsPage() {
 
             {/* Checkmark List */}
             <div className="pt-2 space-y-3 max-w-xl">
-              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Mathematical proof on why market timing destroys compounding returns</span>
               </div>
-              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Multi-asset allocation frameworks for sleep-adjusted portfolio growth</span>
               </div>
-              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Taxation architecture and portfolio pruning to eliminate fund overlap</span>
               </div>
@@ -241,7 +241,7 @@ export default function InsightsPage() {
             <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 block mb-2">
               Curated Analyses
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
               Selected thinking for mutual fund investors.
             </h2>
             <p className="text-slate-600 dark:text-slate-300 text-sm mt-3 leading-relaxed">
