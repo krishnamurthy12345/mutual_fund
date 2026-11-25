@@ -1,25 +1,5 @@
 [
   {
-    "title": "Fixed Deposit",
-    "offerType": "Benefit",
-    "fundCategory": "Equity SIP",
-    "badgeText": "0",
-    "summary": "Small Finance Banks & NBFCs: Offer higher rates up to 7.40% – 8.50%+ p.a. (e.g., AU Small Finance Bank at 7.40%, Suryoday Small Finance Bank up to 8.50%)",
-    "details": "Major Private/Public Banks: Offer standard rates around 6.00% – 7.25% p.a. (e.g., ICICI Bank up to 6.60%, Kotak Bank up to 6.80%, YES Bank up to 7.25%)",
-    "eligibility": "Above 5 years",
-    "minInvestment": "8000",
-    "validUntil": "Jan 2027",
-    "highlights": [
-      "What principal amount are you planning to invest?",
-      "Are you a senior citizen?"
-    ],
-    "featured": true,
-    "isActive": true,
-    "id": "fixed-deposit-e50d38",
-    "createdAt": "2026-11-25T14:21:29.215Z",
-    "updatedAt": "2026-11-25T14:21:29.215Z"
-  },
-  {
     "id": "step-up-sip-accelerator",
     "title": "Step-Up SIP Accelerator Benefit",
     "offerType": "Benefit",
@@ -143,6 +123,6 @@
     "featured": false,
     "isActive": true,
     "createdAt": "2026-10-25T09:00:00.000Z",
-    "updatedAt": "2026-11-25T14:19:45.634Z"
+    "updatedAt": "2026-10-25T09:00:00.000Z"
   }
 ]

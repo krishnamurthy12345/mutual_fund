@@ -1,4 +1,3 @@
-import { connection } from 'next/server';
 import Hero from '@/components/Hero';
 import WhoWeAreSection from '@/components/WhoWeAreSection';
 import StrategicFocusPreview from '@/components/StrategicFocusPreview';
@@ -8,11 +7,10 @@ import SipCalculator from '@/components/SipCalculator';
 import SelectedThinkingPreview from '@/components/SelectedThinkingPreview';
 import FaqSection from '@/components/FaqSection';
 import ConversationBanner from '@/components/ConversationBanner';
-import { getActiveOffers } from '@/lib/offers-store';
+import { getActiveBundledOffers } from '@/lib/client-offers';
 
-export default async function HomePage() {
-  await connection();
-  const activeOffers = await getActiveOffers();
+export default function HomePage() {
+  const activeOffers = getActiveBundledOffers();
 
   return (
     <main className="bg-slate-50 text-slate-900 min-h-screen">

@@ -8,7 +8,7 @@ import {
   OFFER_TYPES,
   type MutualFundOffer,
 } from '@/types/offer';
-import { getAssetPath } from '@/lib/utils';
+import { loadActiveClientOffers } from '@/lib/client-offers';
 import OfferCard from '@/components/OfferCard';
 import OfferDetailModal from '@/components/OfferDetailModal';
 
@@ -26,21 +26,7 @@ export default function OffersCatalogClient({
   const [selectedOffer, setSelectedOffer] = useState<MutualFundOffer | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch(getAssetPath('/api/offers'), { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { offers?: MutualFundOffer[] } | null) => {
-        if (!cancelled && data?.offers) {
-          setOffers(data.offers);
-        }
-      })
-      .catch(() => {
-        // Keep initial SSR offers if fetch fails
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    setOffers(loadActiveClientOffers());
   }, []);
 
   const filteredOffers = useMemo(() => {

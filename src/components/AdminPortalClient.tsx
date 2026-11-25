@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Lock,
@@ -16,6 +16,10 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Search,
+  UploadCloud,
+  Download,
+  RotateCcw,
+  Settings2,
 } from 'lucide-react';
 import {
   FUND_CATEGORIES,
@@ -24,13 +28,25 @@ import {
   type MutualFundOffer,
   type OfferType,
 } from '@/types/offer';
-import { getAssetPath } from '@/lib/utils';
-
-interface AdminPortalClientProps {
-  initialAuthenticated: boolean;
-  initialUsername: string | null;
-  initialOffers: MutualFundOffer[];
-}
+import {
+  clearStoredAdminSession,
+  getStoredAdminSession,
+  setStoredAdminSession,
+  verifyClientAdminCredentials,
+} from '@/lib/client-auth';
+import {
+  applyOfferUpdate,
+  buildNewOffer,
+  clearDraftOffers,
+  getBundledOffers,
+  getDefaultGitHubConfig,
+  hasLocalDraftOffers,
+  loadClientOffers,
+  publishOffersToGitHub,
+  saveDraftOffers,
+  saveGitHubConfig,
+  type GitHubPublishResult,
+} from '@/lib/client-offers';
 
 interface OfferFormState {
   title: string;
@@ -62,14 +78,12 @@ const EMPTY_FORM: OfferFormState = {
   isActive: true,
 };
 
-export default function AdminPortalClient({
-  initialAuthenticated,
-  initialUsername,
-  initialOffers,
-}: AdminPortalClientProps) {
-  const [authenticated, setAuthenticated] = useState(initialAuthenticated);
-  const [adminUser, setAdminUser] = useState<string | null>(initialUsername);
-  const [offers, setOffers] = useState<MutualFundOffer[]>(initialOffers);
+export default function AdminPortalClient() {
+  const [hydrated, setHydrated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [adminUser, setAdminUser] = useState<string | null>(null);
+  const [offers, setOffers] = useState<MutualFundOffer[]>([]);
+  const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
 
   // Login form state
   const [loginUsername, setLoginUsername] = useState('');
@@ -81,33 +95,51 @@ export default function AdminPortalClient({
   // CRUD form state
   const [form, setForm] = useState<OfferFormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
 
+  // GitHub Auto-Publish state
+  const [showPublishPanel, setShowPublishPanel] = useState(false);
+  const [ghRepo, setGhRepo] = useState('');
+  const [ghBranch, setGhBranch] = useState('main');
+  const [ghToken, setGhToken] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<GitHubPublishResult | null>(
+    null
+  );
+
   // List filter & delete confirmation state
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'hidden'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'hidden'>(
+    'all'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [busyOfferId, setBusyOfferId] = useState<string | null>(null);
 
   const formSectionRef = useRef<HTMLDivElement>(null);
 
-  const fetchAllAdminOffers = async () => {
-    const res = await fetch(getAssetPath('/api/offers?all=true'), {
-      cache: 'no-store',
-    });
-    if (res.status === 401) {
-      setAuthenticated(false);
-      setAdminUser(null);
-      return;
+  useEffect(() => {
+    const existingSession = getStoredAdminSession();
+    if (existingSession) {
+      setAuthenticated(true);
+      setAdminUser(existingSession.username);
     }
-    if (res.ok) {
-      const data = (await res.json()) as { offers: MutualFundOffer[] };
-      setOffers(data.offers || []);
-    }
+    setOffers(loadClientOffers());
+    setHasUnsavedDraft(hasLocalDraftOffers());
+
+    const ghConfig = getDefaultGitHubConfig();
+    setGhRepo(ghConfig.ownerRepo);
+    setGhBranch(ghConfig.branch);
+    setGhToken(ghConfig.token);
+    setHydrated(true);
+  }, []);
+
+  const persistDraft = (nextOffers: MutualFundOffer[]) => {
+    setOffers(nextOffers);
+    saveDraftOffers(nextOffers);
+    setHasUnsavedDraft(true);
+    setPublishResult(null);
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -116,41 +148,33 @@ export default function AdminPortalClient({
     setIsLoggingIn(true);
 
     try {
-      const res = await fetch(getAssetPath('/api/auth/login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: loginUsername,
-          password: loginPassword,
-        }),
-      });
-      const data = (await res.json()) as {
-        authenticated?: boolean;
-        username?: string;
-        error?: string;
-      };
-
-      if (!res.ok || !data.authenticated) {
-        setLoginError(data.error || 'Invalid credentials.');
+      const valid = await verifyClientAdminCredentials(
+        loginUsername,
+        loginPassword
+      );
+      if (!valid) {
+        setLoginError('Invalid admin username or password.');
         return;
       }
 
+      const trimmedUser = loginUsername.trim();
+      setStoredAdminSession(trimmedUser);
       setAuthenticated(true);
-      setAdminUser(data.username || loginUsername);
+      setAdminUser(trimmedUser);
       setLoginPassword('');
-      await fetchAllAdminOffers();
+      setOffers(loadClientOffers());
+      setHasUnsavedDraft(hasLocalDraftOffers());
     } catch {
-      setLoginError('Network error while signing in. Please try again.');
+      setLoginError('Unable to verify credentials in this browser.');
     } finally {
       setIsLoggingIn(false);
     }
   };
 
-  const handleLogout = async () => {
-    await fetch(getAssetPath('/api/auth/logout'), { method: 'POST' });
+  const handleLogout = () => {
+    clearStoredAdminSession();
     setAuthenticated(false);
     setAdminUser(null);
-    setOffers([]);
     setEditingId(null);
     setForm(EMPTY_FORM);
     setFeedback(null);
@@ -181,142 +205,156 @@ export default function AdminPortalClient({
     setForm(EMPTY_FORM);
   };
 
-  const handleSubmitOffer = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitOffer = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFeedback(null);
-    setIsSaving(true);
+
+    if (form.title.trim().length < 3) {
+      setFeedback({
+        type: 'error',
+        message: 'Offer / Policy title must be at least 3 characters.',
+      });
+      return;
+    }
+    if (form.summary.trim().length < 10) {
+      setFeedback({
+        type: 'error',
+        message: 'Short card summary must be at least 10 characters.',
+      });
+      return;
+    }
 
     const highlights = form.highlightsText
       .split('\n')
       .map((line) => line.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .slice(0, 8);
 
     const payload = {
-      title: form.title,
+      title: form.title.trim(),
       offerType: form.offerType,
       fundCategory: form.fundCategory,
-      badgeText: form.badgeText,
-      summary: form.summary,
-      details: form.details,
-      eligibility: form.eligibility,
-      minInvestment: form.minInvestment,
-      validUntil: form.validUntil,
+      badgeText: form.badgeText.trim() || 'Client Benefit',
+      summary: form.summary.trim(),
+      details: form.details.trim() || form.summary.trim(),
+      eligibility: form.eligibility.trim() || 'All eligible mutual fund investors',
+      minInvestment: form.minInvestment.trim() || 'As per scheme mandate',
+      validUntil: form.validUntil.trim() || 'Ongoing',
       highlights,
       featured: form.featured,
       isActive: form.isActive,
     };
 
-    try {
-      const endpoint = editingId
-        ? getAssetPath(`/api/offers/${editingId}`)
-        : getAssetPath('/api/offers');
-      const method = editingId ? 'PATCH' : 'POST';
-
-      const res = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.status === 401) {
-        setAuthenticated(false);
-        setAdminUser(null);
-        return;
-      }
-
-      const data = (await res.json()) as {
-        offer?: MutualFundOffer;
-        error?: string;
-      };
-
-      if (!res.ok || !data.offer) {
-        setFeedback({
-          type: 'error',
-          message: data.error || 'Could not save offer/policy.',
-        });
-        return;
-      }
-
-      if (editingId) {
-        setOffers((prev) =>
-          prev.map((item) => (item.id === editingId ? data.offer! : item))
-        );
-        setFeedback({
-          type: 'success',
-          message: `Updated "${data.offer.title}" successfully.`,
-        });
-        setEditingId(null);
-      } else {
-        setOffers((prev) => [data.offer!, ...prev]);
-        setFeedback({
-          type: 'success',
-          message: `Created "${data.offer.title}" and synced to the website.`,
-        });
-      }
-      setForm(EMPTY_FORM);
-    } catch {
+    if (editingId) {
+      const updatedList = applyOfferUpdate(offers, editingId, payload);
+      persistDraft(updatedList);
       setFeedback({
-        type: 'error',
-        message: 'Network error while saving. Please try again.',
+        type: 'success',
+        message: `Updated "${payload.title}" in browser preview. Click "Publish to Live Site" when ready to push to GitHub Pages.`,
       });
-    } finally {
-      setIsSaving(false);
+      setEditingId(null);
+    } else {
+      const created = buildNewOffer(payload);
+      persistDraft([created, ...offers]);
+      setFeedback({
+        type: 'success',
+        message: `Created "${created.title}" in browser preview. Click "Publish to Live Site" to update GitHub Pages for all visitors.`,
+      });
     }
+    setForm(EMPTY_FORM);
   };
 
-  const toggleOfferFlag = async (
+  const toggleOfferFlag = (
     offer: MutualFundOffer,
     field: 'isActive' | 'featured'
   ) => {
-    setBusyOfferId(offer.id);
-    setFeedback(null);
-    try {
-      const res = await fetch(getAssetPath(`/api/offers/${offer.id}`), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: !offer[field] }),
-      });
-
-      if (res.status === 401) {
-        setAuthenticated(false);
-        return;
-      }
-
-      const data = (await res.json()) as { offer?: MutualFundOffer };
-      if (res.ok && data.offer) {
-        setOffers((prev) =>
-          prev.map((item) => (item.id === offer.id ? data.offer! : item))
-        );
-      }
-    } finally {
-      setBusyOfferId(null);
-    }
+    const updatedList = applyOfferUpdate(offers, offer.id, {
+      [field]: !offer[field],
+    });
+    persistDraft(updatedList);
   };
 
-  const handleDeleteOffer = async (id: string) => {
-    setBusyOfferId(id);
+  const handleDeleteOffer = (id: string) => {
+    const filtered = offers.filter((item) => item.id !== id);
+    persistDraft(filtered);
+    if (editingId === id) {
+      cancelEdit();
+    }
+    setConfirmDeleteId(null);
+    setFeedback({
+      type: 'success',
+      message: 'Removed policy / benefit from draft. Publish to GitHub to make live.',
+    });
+  };
+
+  const handleResetToLive = () => {
+    clearDraftOffers();
+    setOffers(getBundledOffers());
+    setHasUnsavedDraft(false);
+    setPublishResult(null);
+    setFeedback({
+      type: 'success',
+      message: 'Reset draft to match the currently deployed site data.',
+    });
+  };
+
+  const handleDownloadJson = () => {
+    const content = `${JSON.stringify(offers, null, 2)}\n`;
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'offers.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePublishToGitHub = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setFeedback(null);
-    try {
-      const res = await fetch(getAssetPath(`/api/offers/${id}`), {
-        method: 'DELETE',
+
+    if (!ghToken.trim()) {
+      setShowPublishPanel(true);
+      setFeedback({
+        type: 'error',
+        message:
+          'Enter your GitHub Personal Access Token (with Contents: Read & Write permission) below to publish directly to GitHub Pages.',
       });
-      if (res.status === 401) {
-        setAuthenticated(false);
-        return;
-      }
-      if (res.ok) {
-        setOffers((prev) => prev.filter((item) => item.id !== id));
-        if (editingId === id) {
-          cancelEdit();
-        }
-        setConfirmDeleteId(null);
-        setFeedback({
-          type: 'success',
-          message: 'Policy / benefit removed from catalog.',
-        });
-      }
+      return;
+    }
+
+    setIsPublishing(true);
+    saveGitHubConfig({
+      ownerRepo: ghRepo.trim(),
+      branch: ghBranch.trim() || 'main',
+      token: ghToken.trim(),
+    });
+
+    try {
+      const result = await publishOffersToGitHub({
+        ownerRepo: ghRepo,
+        branch: ghBranch,
+        token: ghToken,
+        offers,
+      });
+      setPublishResult(result);
+      clearDraftOffers();
+      setHasUnsavedDraft(false);
+      setFeedback({
+        type: 'success',
+        message:
+          'Committed src/data/offers.json to GitHub! GitHub Actions is now rebuilding and deploying your live site.',
+      });
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'Failed to publish offers to GitHub.',
+      });
     } finally {
-      setBusyOfferId(null);
+      setIsPublishing(false);
     }
   };
 
@@ -346,6 +384,16 @@ export default function AdminPortalClient({
     });
   }, [offers, statusFilter, searchQuery]);
 
+  if (!hydrated) {
+    return (
+      <main className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-32 pb-24 px-6 flex items-center justify-center">
+        <div className="text-sm font-semibold text-slate-500">
+          Loading Admin Portal...
+        </div>
+      </main>
+    );
+  }
+
   /* ========================================================= */
   /* LOGIN VIEW                                                */
   /* ========================================================= */
@@ -367,7 +415,7 @@ export default function AdminPortalClient({
             Admin Portal Login
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-            Sign in to create, update, or publish mutual fund offers, client benefits, and advisory policies.
+            Sign in to create, edit, and publish mutual fund offers, client benefits, and advisory policies to GitHub Pages.
           </p>
 
           {loginError && (
@@ -445,7 +493,7 @@ export default function AdminPortalClient({
             </Link>
             <span className="inline-flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Protected Session
+              GitHub Pages Admin
             </span>
           </div>
         </div>
@@ -458,9 +506,9 @@ export default function AdminPortalClient({
   /* ========================================================= */
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pt-28 pb-24">
-      <div className="max-w-7xl mx-auto px-6 space-y-10">
+      <div className="max-w-7xl mx-auto px-6 space-y-8">
         {/* Top Admin Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 mb-3">
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -474,25 +522,142 @@ export default function AdminPortalClient({
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => handlePublishToGitHub()}
+              disabled={isPublishing}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+            >
+              <UploadCloud className="w-4 h-4" />
+              <span>
+                {isPublishing ? 'Publishing...' : 'Publish to Live Site'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowPublishPanel((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 transition-all cursor-pointer"
+            >
+              <Settings2 className="w-4 h-4 text-emerald-600" />
+              <span>GitHub Setup</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadJson}
+              title="Download offers.json"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-emerald-600" />
+              <span>JSON</span>
+            </button>
+
             <Link
               href="/offers"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 transition-all"
             >
-              <span>View Public Offers Page</span>
+              <span>Preview Offers</span>
               <ArrowUpRight className="w-4 h-4 text-emerald-600" />
             </Link>
 
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Logout</span>
             </button>
           </div>
         </div>
+
+        {/* Draft / GitHub Auto-Publish Config Panel */}
+        {(showPublishPanel || hasUnsavedDraft) && (
+          <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4 text-emerald-600" />
+                  GitHub Pages Auto-Publish Settings
+                </h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Publishing commits <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">src/data/offers.json</code> directly to your repository, automatically triggering <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">deploy.yml</code> on GitHub Actions.
+                </p>
+              </div>
+
+              {hasUnsavedDraft && (
+                <button
+                  type="button"
+                  onClick={handleResetToLive}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs font-bold cursor-pointer self-start"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Discard Local Draft</span>
+                </button>
+              )}
+            </div>
+
+            {showPublishPanel && (
+              <form
+                onSubmit={handlePublishToGitHub}
+                className="grid md:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800"
+              >
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    GitHub Repo (owner/repo)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={ghRepo}
+                    onChange={(e) => setGhRepo(e.target.value)}
+                    placeholder="owner/repo"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Branch
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={ghBranch}
+                    onChange={(e) => setGhBranch(e.target.value)}
+                    placeholder="main"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    GitHub Token (Contents: Write)
+                  </label>
+                  <input
+                    type="password"
+                    value={ghToken}
+                    onChange={(e) => setGhToken(e.target.value)}
+                    placeholder="github_pat_..."
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={isPublishing}
+                    className="w-full py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
+                  >
+                    {isPublishing ? 'Publishing...' : 'Save & Publish Now'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -506,7 +671,7 @@ export default function AdminPortalClient({
           </div>
           <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-1">
-              Live on Website
+              Active on Website
             </span>
             <span className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
               {stats.active}
@@ -530,25 +695,48 @@ export default function AdminPortalClient({
           </div>
         </div>
 
-        {/* Feedback Banner */}
+        {/* Feedback & GitHub Commit Result */}
         {feedback && (
           <div
-            className={`p-4 rounded-2xl border text-sm font-medium flex items-center gap-2.5 ${
+            className={`p-4 rounded-2xl border text-sm font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
               feedback.type === 'success'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
                 : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300'
             }`}
           >
-            {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="flex items-center gap-2.5">
+              {feedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{feedback.message}</span>
+            </div>
+
+            {publishResult && (
+              <div className="flex items-center gap-3 text-xs font-bold shrink-0">
+                <a
+                  href={publishResult.commitUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline hover:opacity-80"
+                >
+                  View Commit ↗
+                </a>
+                <a
+                  href={publishResult.workflowUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline hover:opacity-80"
+                >
+                  GitHub Actions ↗
+                </a>
+              </div>
             )}
-            <span>{feedback.message}</span>
           </div>
         )}
 
-        {/* Main 2-Column Workspace: Form (Left) + Existing Policies List (Right) */}
+        {/* Main 2-Column Workspace */}
         <div className="grid lg:grid-cols-12 gap-8 items-start">
           {/* CREATE / EDIT FORM */}
           <div
@@ -566,12 +754,12 @@ export default function AdminPortalClient({
                 </div>
                 <div>
                   <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
-                    {editingId ? 'Edit Policy / Offer' : 'Create New Policy or Benefit'}
+                    {editingId
+                      ? 'Edit Policy / Offer'
+                      : 'Create New Policy or Benefit'}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {editingId
-                      ? 'Modify details and save changes immediately'
-                      : 'Published items appear immediately on the website'}
+                    Saves immediately for preview; publish to deploy live
                   </p>
                 </div>
               </div>
@@ -777,14 +965,9 @@ export default function AdminPortalClient({
 
               <button
                 type="submit"
-                disabled={isSaving}
-                className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold uppercase tracking-widest shadow-md transition-all cursor-pointer"
+                className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest shadow-md transition-all cursor-pointer"
               >
-                {isSaving
-                  ? 'Saving...'
-                  : editingId
-                    ? 'Save Policy Changes'
-                    : 'Create & Publish Policy'}
+                {editingId ? 'Save Policy Changes' : 'Add Offer / Policy to Draft'}
               </button>
             </form>
           </div>
@@ -827,133 +1010,127 @@ export default function AdminPortalClient({
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredOffers.map((offer) => {
-                  const isBusy = busyOfferId === offer.id;
-                  return (
-                    <div
-                      key={offer.id}
-                      className={`rounded-2xl bg-white dark:bg-slate-900 border p-5 transition-all ${
-                        offer.isActive
-                          ? 'border-slate-200 dark:border-slate-800'
-                          : 'border-dashed border-slate-300 dark:border-slate-700 opacity-75'
-                      }`}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              offer.isActive
-                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                            }`}
-                          >
-                            {offer.isActive ? 'Published' : 'Hidden'}
-                          </span>
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            {offer.offerType}
-                          </span>
-                          <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                            {offer.fundCategory}
-                          </span>
-                        </div>
-
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60">
-                          {offer.badgeText}
+                {filteredOffers.map((offer) => (
+                  <div
+                    key={offer.id}
+                    className={`rounded-2xl bg-white dark:bg-slate-900 border p-5 transition-all ${
+                      offer.isActive
+                        ? 'border-slate-200 dark:border-slate-800'
+                        : 'border-dashed border-slate-300 dark:border-slate-700 opacity-75'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            offer.isActive
+                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
+                          {offer.isActive ? 'Published' : 'Hidden'}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          {offer.offerType}
+                        </span>
+                        <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          {offer.fundCategory}
                         </span>
                       </div>
 
-                      <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mb-1">
-                        {offer.title}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                        {offer.summary}
-                      </p>
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60">
+                        {offer.badgeText}
+                      </span>
+                    </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() => toggleOfferFlag(offer, 'isActive')}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer disabled:opacity-50"
-                          >
-                            {offer.isActive ? (
-                              <>
-                                <EyeOff className="w-3.5 h-3.5" />
-                                <span>Hide</span>
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Publish</span>
-                              </>
-                            )}
-                          </button>
+                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mb-1">
+                      {offer.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
+                      {offer.summary}
+                    </p>
 
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() => toggleOfferFlag(offer, 'featured')}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
-                              offer.featured
-                                ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-50'
-                            }`}
-                          >
-                            <Star
-                              className={`w-3.5 h-3.5 ${
-                                offer.featured ? 'fill-current' : ''
-                              }`}
-                            />
-                            <span>
-                              {offer.featured ? 'Featured' : 'Feature on Home'}
-                            </span>
-                          </button>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(offer)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-colors cursor-pointer"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
-
-                          {confirmDeleteId === offer.id ? (
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => handleDeleteOffer(offer.id)}
-                                className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                            </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleOfferFlag(offer, 'isActive')}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                        >
+                          {offer.isActive ? (
+                            <>
+                              <EyeOff className="w-3.5 h-3.5" />
+                              <span>Hide</span>
+                            </>
                           ) : (
+                            <>
+                              <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Publish</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleOfferFlag(offer, 'featured')}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                            offer.featured
+                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-50'
+                          }`}
+                        >
+                          <Star
+                            className={`w-3.5 h-3.5 ${
+                              offer.featured ? 'fill-current' : ''
+                            }`}
+                          />
+                          <span>
+                            {offer.featured ? 'Featured' : 'Feature on Home'}
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(offer)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+
+                        {confirmDeleteId === offer.id ? (
+                          <div className="flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => setConfirmDeleteId(offer.id)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-400 text-xs font-bold transition-colors cursor-pointer"
+                              onClick={() => handleDeleteOffer(offer.id)}
+                              className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Delete</span>
+                              Confirm
                             </button>
-                          )}
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(offer.id)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-400 text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { connection } from 'next/server';
-import { getActiveOffers } from '@/lib/offers-store';
+import { getActiveBundledOffers } from '@/lib/client-offers';
 import OffersCatalogClient from '@/components/OffersCatalogClient';
 
 export const metadata: Metadata = {
@@ -9,8 +8,7 @@ export const metadata: Metadata = {
     'Explore active mutual fund offers, SIP benefits, tax-saving ELSS advantages, and standing advisory policies.',
 };
 
-export default async function OffersPage() {
-  await connection();
-  const offers = await getActiveOffers();
+export default function OffersPage() {
+  const offers = getActiveBundledOffers();
   return <OffersCatalogClient initialOffers={offers} />;
 }
