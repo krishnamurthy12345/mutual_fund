@@ -171,6 +171,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/offers" className="hover:text-white transition-colors">
+                  Offers & Benefits
+                </Link>
+              </li>
+              <li>
                 <Link href="/insights" className="hover:text-white transition-colors">
                   Insights & Perspectives
                 </Link>
@@ -267,6 +272,9 @@ export default function Footer() {
         <div className="pt-8 border-t border-emerald-800 text-xs text-emerald-100/50 flex flex-col md:flex-row justify-between items-center gap-4">
           <p>© {new Date().getFullYear()} ABC Mutual Fund. All rights reserved.</p>
           <div className="flex gap-6">
+            <Link href="/admin" className="hover:text-emerald-300 transition-colors">
+              Admin Portal
+            </Link>
             <Link href="/privacy" className="hover:text-emerald-300 transition-colors">
               Privacy Policy
             </Link>

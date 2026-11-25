@@ -1,13 +1,19 @@
+import { connection } from 'next/server';
 import Hero from '@/components/Hero';
 import WhoWeAreSection from '@/components/WhoWeAreSection';
 import StrategicFocusPreview from '@/components/StrategicFocusPreview';
+import OffersBenefitsPreview from '@/components/OffersBenefitsPreview';
 import AssetAllocation from '@/components/AssetAllocation';
 import SipCalculator from '@/components/SipCalculator';
 import SelectedThinkingPreview from '@/components/SelectedThinkingPreview';
 import FaqSection from '@/components/FaqSection';
 import ConversationBanner from '@/components/ConversationBanner';
+import { getActiveOffers } from '@/lib/offers-store';
 
-export default function HomePage() {
+export default async function HomePage() {
+  await connection();
+  const activeOffers = await getActiveOffers();
+
   return (
     <main className="bg-slate-50 text-slate-900 min-h-screen">
       {/* Hero Section */}
@@ -18,6 +24,9 @@ export default function HomePage() {
 
       {/* 4 Strategic Focus Pillars (Mutual Funds Only) */}
       <StrategicFocusPreview />
+
+      {/* Mutual Fund Offers, Policies & Client Benefits */}
+      <OffersBenefitsPreview initialOffers={activeOffers} />
 
       {/* Multi-Asset Dynamic Rebalancing Allocation */}
       <AssetAllocation />
